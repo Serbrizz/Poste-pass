@@ -1,0 +1,947 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#003399" />
+<link rel="manifest" href="./manifest.webmanifest" />
+<link rel="icon" type="image/png" href="./favicon.png" />
+<link rel="apple-touch-icon" href="./icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Poste Pass" />
+<title>Poste Pass</title>
+<style>
+  :root {
+    color-scheme: light;
+    /* Palette Poste Italiane: blu #003399, giallo #FFCC00 */
+    --bg: #f4f6fb;
+    --card: #ffffff;
+    --ink: #0a1a4a;
+    --ink-soft: #465280;
+    --muted: #8a94b8;
+    --line: #e3e7f2;
+    --brand: #003399;       /* blu Poste */
+    --brand-ink: #ffffff;
+    --accent: #ffcc00;      /* giallo Poste */
+    --accent-ink: #003399;  /* testo blu sul giallo */
+    --smart: #ffcc00;       /* smart = giallo */
+    --smart-ink: #003399;
+    --sede: #003399;        /* sede = blu */
+    --sede-ink: #ffffff;
+    --danger: #c62828;
+    --ok: #2e7d32;
+    --warn: #d97706;
+    --shadow: 0 4px 16px rgba(0, 51, 153, 0.08);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) calc(env(safe-area-inset-bottom) + 24px) env(safe-area-inset-left);
+    -webkit-font-smoothing: antialiased;
+    font-size: 16px;
+    line-height: 1.4;
+  }
+  .app {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 16px 16px 24px;
+  }
+  header.top {
+    margin: 4px 4px 16px;
+  }
+  header.top .brand {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--brand);
+    letter-spacing: -0.01em;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  header.top .brand::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 22px;
+    background: var(--accent);
+    border-radius: 3px;
+  }
+  header.top h1 { font-size: 16px; margin: 6px 0 0; letter-spacing: -0.01em; color: var(--ink-soft); font-weight: 600; }
+  header.top .sub { color: var(--ink-soft); font-size: 13px; margin-top: 2px; }
+
+  .card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: var(--shadow);
+    margin-bottom: 14px;
+  }
+
+  /* Riepilogo settimana */
+  .week h2 { margin: 0 0 10px; font-size: 15px; color: var(--ink-soft); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  .totals {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .totals .big { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; }
+  .totals .goal { color: var(--ink-soft); font-size: 15px; }
+  .bar {
+    height: 10px;
+    background: #eef2f7;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .bar > span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--brand));
+    transition: width .3s ease;
+  }
+  .bar.done > span { background: var(--brand); }
+  .split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .chip {
+    border-radius: 12px;
+    padding: 10px 12px;
+    background: #f8fafc;
+    border: 1px solid var(--line);
+  }
+  .chip .label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .chip .dot { width: 8px; height: 8px; border-radius: 999px; }
+  .chip .dot.smart { background: var(--smart); }
+  .chip .dot.sede { background: var(--sede); }
+  .chip .val { font-size: 20px; font-weight: 700; margin-top: 2px; }
+
+  /* Turno in corso */
+  .running {
+    background: linear-gradient(135deg, #003399, #1a49b8);
+    color: #ffffff;
+  }
+  .running .label { color: #ffcc00; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+  .running .remaining { font-size: 28px; font-weight: 700; margin-top: 4px; letter-spacing: -0.02em;}
+  .running .remaining.over { color: #ffcc00; }
+  .running .since { color: #cfd6ee; font-size: 13px; margin-top: 4px;}
+  .running .end-at { color: #cfd6ee; font-size: 13px; margin-top: 2px;}
+  .running .stop {
+    margin-top: 12px;
+    width: 100%;
+    background: var(--danger);
+    color: white;
+    border: 0;
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  /* Bottoni azione principali */
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .btn {
+    border: 0;
+    border-radius: 14px;
+    padding: 16px 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    line-height: 1.2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    transition: transform .06s ease, opacity .15s;
+    color: white;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn.sede { background: var(--sede); color: var(--sede-ink); }
+  .btn.smart { background: var(--smart); color: var(--smart-ink); }
+  .btn:disabled { opacity: 0.45; }
+  .btn .em { font-size: 22px; }
+
+  .actions-info {
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: 13px;
+    margin: -6px 0 14px;
+    min-height: 18px;
+  }
+
+  /* Lista turni */
+  .shifts h2 { margin: 0 0 10px; font-size: 15px; color: var(--ink-soft); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  .shift {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 6px;
+    border-bottom: 1px solid var(--line);
+  }
+  .shift:last-child { border-bottom: 0; }
+  .shift .tag {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    display: grid; place-items: center;
+    color: white; font-size: 11px; font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+  }
+  .shift .tag.smart { background: var(--smart); color: var(--smart-ink); }
+  .shift .tag.sede { background: var(--sede); color: var(--sede-ink); }
+  .shift .info { flex: 1; min-width: 0; }
+  .shift .info .day { font-weight: 600; font-size: 15px; }
+  .shift .info .times { font-size: 13px; color: var(--ink-soft); }
+  .shift .hours { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 15px; }
+  .shift .menu {
+    background: transparent; border: 0; color: var(--muted);
+    font-size: 20px; padding: 4px 8px; cursor: pointer;
+  }
+  .empty { color: var(--muted); text-align: center; padding: 20px 0; font-size: 14px; }
+  .add-btn {
+    width: 100%;
+    margin-top: 12px;
+    padding: 12px;
+    background: #f8fafc;
+    border: 1px dashed var(--line);
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .add-btn:active { background: #eef2f7; }
+
+  /* Selettore tipo (segmented) */
+  .segmented {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .segmented button {
+    padding: 12px;
+    border: 1px solid var(--line);
+    background: white;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .segmented button.on {
+    background: var(--brand);
+    color: white;
+    border-color: var(--brand);
+  }
+
+  /* Modale generica */
+  .modal-back {
+    position: fixed; inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 50;
+  }
+  .modal-back.open { display: flex; }
+  .modal {
+    background: var(--card);
+    width: 100%;
+    max-width: 560px;
+    border-radius: 20px 20px 0 0;
+    padding: 18px 18px calc(18px + env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.15);
+  }
+  .modal h3 { margin: 0 0 12px; font-size: 17px; }
+  .modal label { display: block; font-size: 13px; color: var(--ink-soft); margin: 10px 0 4px; }
+  .modal input, .modal select {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: white;
+    color: var(--ink);
+  }
+  .modal .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .modal .buttons {
+    display: flex; gap: 10px; margin-top: 16px;
+  }
+  .modal .buttons button {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    border: 0;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .modal .buttons .primary { background: var(--brand); color: white; }
+  .modal .buttons .ghost { background: #f1f5f9; color: var(--ink); }
+  .modal .buttons .danger { background: transparent; color: var(--danger); }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(20px + env(safe-area-inset-bottom));
+    transform: translateX(-50%) translateY(20px);
+    background: var(--ink);
+    color: white;
+    padding: 10px 16px;
+    border-radius: 999px;
+    font-size: 14px;
+    opacity: 0;
+    transition: opacity .2s, transform .2s;
+    pointer-events: none;
+    z-index: 100;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">Poste Pass</div>
+    <h1>Ore di lavoro</h1>
+    <div class="sub" id="weekLabel">—</div>
+  </header>
+
+  <!-- Turno in corso (mostrato solo se attivo) -->
+  <section class="card running" id="runningCard" style="display:none">
+    <div class="label">Turno in sede in corso</div>
+    <div class="remaining" id="runningRemaining">—</div>
+    <div class="since" id="runningSince">Iniziato alle —</div>
+    <div class="end-at" id="runningEndAt"></div>
+    <button class="stop" id="btnStop">Esci — chiudi turno</button>
+  </section>
+
+  <!-- Azioni principali -->
+  <div class="actions">
+    <button class="btn sede" id="btnStart">
+      <span class="em">🏢</span>
+      <span>Entra in sede</span>
+    </button>
+    <button class="btn smart" id="btnSmart">
+      <span class="em">🏠</span>
+      <span>Segna oggi smart</span>
+    </button>
+  </div>
+  <div id="actionsInfo" class="actions-info"></div>
+
+  <!-- Riepilogo settimana -->
+  <section class="card week">
+    <h2>Questa settimana</h2>
+    <div class="totals">
+      <div>
+        <div class="big"><span id="totalH">0</span><span style="font-size:20px;color:var(--ink-soft)">/36h</span></div>
+        <div class="goal" id="remaining">Mancano 36h 00m</div>
+      </div>
+    </div>
+    <div class="bar" id="bar"><span style="width:0%"></span></div>
+    <div class="split">
+      <div class="chip">
+        <div class="label"><span class="dot sede"></span>Sede</div>
+        <div class="val" id="sedeH">0h 00m</div>
+      </div>
+      <div class="chip">
+        <div class="label"><span class="dot smart"></span>Smart</div>
+        <div class="val" id="smartH">0h 00m</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Lista turni della settimana -->
+  <section class="card shifts">
+    <h2>Turni della settimana</h2>
+    <div id="shiftsList"></div>
+    <button class="add-btn" id="btnAddShift">+ Aggiungi turno</button>
+  </section>
+</div>
+
+<!-- Modale AGGIUNGI turno -->
+<div class="modal-back" id="addModal">
+  <div class="modal">
+    <h3>Aggiungi turno</h3>
+    <label>Giorno</label>
+    <input type="date" id="aDate" />
+    <label>Tipo</label>
+    <div class="segmented" id="aType">
+      <button type="button" data-type="sede">🏢 Sede</button>
+      <button type="button" data-type="smart">🏠 Smart</button>
+    </div>
+    <div id="aSedeFields" style="display:none">
+      <div class="row">
+        <div>
+          <label>Entrata</label>
+          <input type="time" id="aStart" value="08:00" />
+        </div>
+        <div>
+          <label>Uscita</label>
+          <input type="time" id="aEnd" value="16:00" />
+        </div>
+      </div>
+      <div style="margin-top:8px; color:var(--ink-soft); font-size:13px;">Pausa pranzo di 30 minuti sottratta automaticamente.</div>
+    </div>
+    <div id="aSmartInfo" style="display:none; margin-top:12px; color:var(--ink-soft); font-size:13px;"></div>
+    <div class="buttons">
+      <button class="ghost" id="aCancel">Annulla</button>
+      <button class="primary" id="aSave">Aggiungi</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modale modifica turno -->
+<div class="modal-back" id="editModal">
+  <div class="modal">
+    <h3 id="editTitle">Modifica turno</h3>
+    <div id="editBody"></div>
+    <div class="buttons">
+      <button class="danger" id="editDelete">Elimina</button>
+      <button class="ghost" id="editCancel">Annulla</button>
+      <button class="primary" id="editSave">Salva</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // -----------------------------
+  // Modello dati e storage
+  // -----------------------------
+  const STORAGE_KEY = 'ore-lavoro-v1';
+  const PAUSA_MIN_DEFAULT = 30; // pausa fissa sottratta ai turni in sede (in minuti)
+  const EARLIEST_START_H = 8;   // ora minima di inizio turno: se entri prima, parte alle 8:00
+  const EARLIEST_START_M = 0;
+
+  // Se l'ora di entrata è prima del minimo consentito nello stesso giorno,
+  // la porta al minimo. Ritorna un ISO string.
+  function clampStart(isoOrDate) {
+    const d = new Date(isoOrDate);
+    const floor = new Date(d.getFullYear(), d.getMonth(), d.getDate(), EARLIEST_START_H, EARLIEST_START_M, 0, 0);
+    return (d < floor ? floor : d).toISOString();
+  }
+
+  // Struttura state:
+  // {
+  //   pausaMin: 30,
+  //   shifts: [
+  //     { id, type: 'sede', date: 'YYYY-MM-DD', start: iso, end: iso|null, pauseMin: 30 },
+  //     { id, type: 'smart', date: 'YYYY-MM-DD' }
+  //   ]
+  // }
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return { pausaMin: PAUSA_MIN_DEFAULT, shifts: [] };
+      const s = JSON.parse(raw);
+      if (typeof s.pausaMin !== 'number') s.pausaMin = PAUSA_MIN_DEFAULT;
+      if (!Array.isArray(s.shifts)) s.shifts = [];
+      return s;
+    } catch(e) {
+      return { pausaMin: PAUSA_MIN_DEFAULT, shifts: [] };
+    }
+  }
+  function saveState() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+  let state = loadState();
+
+  // -----------------------------
+  // Utility date / settimana
+  // -----------------------------
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function ymd(d) { return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+  function parseYMD(s) {
+    const [y,m,d] = s.split('-').map(Number);
+    return new Date(y, m-1, d);
+  }
+  function startOfWeek(d) {
+    // La settimana si azzera ogni domenica: startOfWeek = domenica.
+    // Turni lavorativi effettivi: lun-ven all'interno della stessa settimana.
+    const dt = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const dow = dt.getDay(); // Dom=0, Lun=1, ..., Sab=6
+    dt.setDate(dt.getDate() - dow);
+    return dt;
+  }
+  function endOfWeek(d) {
+    const s = startOfWeek(d);
+    s.setDate(s.getDate() + 7); // esclusivo: la domenica successiva
+    return s;
+  }
+  // Target ore per weekday (0=Lun ... 6=Dom): lun-gio 7.5, ven 6, sab-dom 0
+  function targetHoursForDate(d) {
+    const dow = (d.getDay() + 6) % 7;
+    if (dow <= 3) return 7.5;
+    if (dow === 4) return 6;
+    return 0;
+  }
+  function fmtHM(hours) {
+    if (hours < 0) hours = 0;
+    const totalMin = Math.round(hours * 60);
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    return `${h}h ${pad(m)}m`;
+  }
+  function fmtHMS(ms) {
+    const total = Math.max(0, Math.floor(ms / 1000));
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    return `${pad(h)}:${pad(m)}:${pad(s)}`;
+  }
+  function fmtTime(iso) {
+    const d = new Date(iso);
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  const DAYS_IT = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'];
+  const MONTHS_IT = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+  function dayLabel(dateStr) {
+    const d = parseYMD(dateStr);
+    const dow = (d.getDay() + 6) % 7;
+    return `${DAYS_IT[dow]} ${d.getDate()} ${MONTHS_IT[d.getMonth()]}`;
+  }
+  function uid() { return Math.random().toString(36).slice(2, 10); }
+
+  // -----------------------------
+  // Calcolo ore per turno
+  // -----------------------------
+  function hoursForShift(shift) {
+    if (shift.type === 'smart') {
+      return targetHoursForDate(parseYMD(shift.date));
+    }
+    // sede
+    if (!shift.end) return 0; // ancora in corso
+    const ms = new Date(shift.end) - new Date(shift.start);
+    const pauseMin = typeof shift.pauseMin === 'number' ? shift.pauseMin : state.pausaMin;
+    const workedMs = ms - pauseMin * 60 * 1000;
+    return Math.max(0, workedMs / 3600000);
+  }
+  function shiftsInWeek(refDate) {
+    const s = startOfWeek(refDate), e = endOfWeek(refDate);
+    return state.shifts.filter(sh => {
+      const d = parseYMD(sh.date);
+      return d >= s && d < e;
+    }).sort((a,b) => a.date.localeCompare(b.date) || (a.start||'').localeCompare(b.start||''));
+  }
+  function runningShift() {
+    return state.shifts.find(s => s.type === 'sede' && !s.end);
+  }
+  function hasSmartOnDate(dateStr) {
+    return state.shifts.some(s => s.type === 'smart' && s.date === dateStr);
+  }
+  function hasAnyShiftOnDate(dateStr) {
+    return state.shifts.some(s => s.date === dateStr);
+  }
+
+  // -----------------------------
+  // Rendering
+  // -----------------------------
+  const $ = sel => document.querySelector(sel);
+
+  function renderWeekLabel() {
+    const now = new Date();
+    // Mostro l'intervallo lun-ven (i giorni lavorativi della settimana corrente)
+    const s = startOfWeek(now); // domenica
+    const mon = new Date(s); mon.setDate(s.getDate() + 1);
+    const fri = new Date(s); fri.setDate(s.getDate() + 5);
+    const sameMonth = mon.getMonth() === fri.getMonth();
+    const label = sameMonth
+      ? `${mon.getDate()}–${fri.getDate()} ${MONTHS_IT[mon.getMonth()]}`
+      : `${mon.getDate()} ${MONTHS_IT[mon.getMonth()]} – ${fri.getDate()} ${MONTHS_IT[fri.getMonth()]}`;
+    $('#weekLabel').textContent = `Settimana ${label}`;
+  }
+
+  function renderSummary() {
+    const list = shiftsInWeek(new Date());
+    let sede = 0, smart = 0;
+    for (const sh of list) {
+      const h = hoursForShift(sh);
+      if (sh.type === 'sede') sede += h; else smart += h;
+    }
+    const total = sede + smart;
+    $('#totalH').textContent = fmtHM(total).replace(/m$/,''); // "Xh YY"
+    $('#sedeH').textContent = fmtHM(sede);
+    $('#smartH').textContent = fmtHM(smart);
+    const pct = Math.min(100, (total / 36) * 100);
+    const bar = $('#bar');
+    bar.firstElementChild.style.width = pct + '%';
+    bar.classList.toggle('done', total >= 36);
+    const remaining = Math.max(0, 36 - total);
+    $('#remaining').textContent = total >= 36
+      ? `Obiettivo raggiunto! +${fmtHM(total - 36)} extra`
+      : `Mancano ${fmtHM(remaining)}`;
+  }
+
+  function renderShiftsList() {
+    const list = shiftsInWeek(new Date());
+    const el = $('#shiftsList');
+    if (list.length === 0) {
+      el.innerHTML = '<div class="empty">Nessun turno questa settimana</div>';
+      return;
+    }
+    el.innerHTML = list.map(sh => {
+      const h = hoursForShift(sh);
+      const timesTxt = sh.type === 'smart'
+        ? `Giornata smart · target ${fmtHM(targetHoursForDate(parseYMD(sh.date)))}`
+        : (sh.end
+            ? `${fmtTime(sh.start)} → ${fmtTime(sh.end)} · pausa ${sh.pauseMin ?? state.pausaMin}m`
+            : `${fmtTime(sh.start)} → in corso`);
+      return `
+        <div class="shift" data-id="${sh.id}">
+          <div class="tag ${sh.type}">${sh.type}</div>
+          <div class="info">
+            <div class="day">${dayLabel(sh.date)}</div>
+            <div class="times">${timesTxt}</div>
+          </div>
+          <div class="hours">${fmtHM(h)}</div>
+          <button class="menu" data-edit="${sh.id}" aria-label="Modifica">⋯</button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  let tickHandle = null;
+  function renderRunning() {
+    const r = runningShift();
+    const card = $('#runningCard');
+    const startBtn = $('#btnStart');
+    if (r) {
+      card.style.display = 'block';
+      startBtn.disabled = true;
+      const startDT = new Date(r.start);
+      const target = targetHoursForDate(parseYMD(r.date));
+      const pause = typeof r.pauseMin === 'number' ? r.pauseMin : state.pausaMin;
+      // Fine turno = entrata + ore target + pausa (perché la pausa verrà sottratta al calcolo effettivo)
+      const endMs = startDT.getTime() + (target * 60 + pause) * 60 * 1000;
+      const endDT = new Date(endMs);
+      $('#runningSince').textContent = `Entrata: ${fmtTime(r.start)} · pausa ${pause}m`;
+      $('#runningEndAt').textContent = target > 0
+        ? `Fine turno stimata: ${pad(endDT.getHours())}:${pad(endDT.getMinutes())}`
+        : `Giornata non lavorativa`;
+      const update = () => {
+        const remainMs = endMs - Date.now();
+        const el = $('#runningRemaining');
+        if (target === 0) {
+          el.textContent = '—';
+          el.classList.remove('over');
+        } else if (remainMs > 0) {
+          el.textContent = `Manca ${fmtHM(remainMs / 3600000)} alla fine`;
+          el.classList.remove('over');
+        } else {
+          el.textContent = `+${fmtHM(-remainMs / 3600000)} oltre la fine`;
+          el.classList.add('over');
+        }
+      };
+      update();
+      if (tickHandle) clearInterval(tickHandle);
+      tickHandle = setInterval(update, 30 * 1000); // aggiorna ogni 30s
+    } else {
+      card.style.display = 'none';
+      startBtn.disabled = false;
+      if (tickHandle) { clearInterval(tickHandle); tickHandle = null; }
+    }
+  }
+
+  function renderAll() {
+    renderWeekLabel();
+    renderRunning();
+    renderSummary();
+    renderShiftsList();
+    // stato bottoni: se oggi ha già un turno (smart o sede), disabilita entrambi
+    const today = ymd(new Date());
+    const already = hasAnyShiftOnDate(today);
+    const running = !!runningShift();
+    $('#btnStart').disabled = already; // include il caso "sede in corso"
+    $('#btnSmart').disabled = already;
+    // messaggio informativo sotto ai bottoni
+    const info = $('#actionsInfo');
+    info.textContent = running ? 'Turno in sede in corso.' : '';
+  }
+
+  // -----------------------------
+  // Toast
+  // -----------------------------
+  let toastTimer = null;
+  function toast(msg) {
+    const t = $('#toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+  }
+
+  // -----------------------------
+  // Azioni
+  // -----------------------------
+  $('#btnStart').addEventListener('click', () => {
+    if (runningShift()) return;
+    const now = new Date();
+    if (hasAnyShiftOnDate(ymd(now))) return;
+    const start = clampStart(now);
+    state.shifts.push({
+      id: uid(),
+      type: 'sede',
+      date: ymd(now),
+      start: start,
+      end: null,
+      pauseMin: state.pausaMin
+    });
+    saveState(); renderAll();
+    const early = new Date(start).getTime() > now.getTime();
+    toast(early ? `Entrata registrata alle ${EARLIEST_START_H}:${pad(EARLIEST_START_M)}` : 'Entrata registrata');
+  });
+
+  $('#btnStop').addEventListener('click', () => {
+    const r = runningShift();
+    if (!r) return;
+    r.end = new Date().toISOString();
+    saveState(); renderAll();
+    toast(`Turno chiuso: ${fmtHM(hoursForShift(r))}`);
+  });
+
+  $('#btnSmart').addEventListener('click', () => {
+    const today = ymd(new Date());
+    if (hasAnyShiftOnDate(today)) return;
+    state.shifts.push({
+      id: uid(),
+      type: 'smart',
+      date: today
+    });
+    saveState(); renderAll();
+    toast('Giornata smart registrata');
+  });
+
+  // -----------------------------
+  // Modale modifica turno
+  // -----------------------------
+  let editingId = null;
+
+  function openEditor(id) {
+    const sh = state.shifts.find(s => s.id === id);
+    if (!sh) return;
+    editingId = id;
+    $('#editTitle').textContent = sh.type === 'smart' ? 'Modifica giornata smart' : 'Modifica turno in sede';
+    if (sh.type === 'smart') {
+      $('#editBody').innerHTML = `
+        <label>Data</label>
+        <input type="date" id="fDate" value="${sh.date}" />
+      `;
+    } else {
+      const startDT = sh.start ? new Date(sh.start) : null;
+      const endDT = sh.end ? new Date(sh.end) : null;
+      const startTime = startDT ? `${pad(startDT.getHours())}:${pad(startDT.getMinutes())}` : '';
+      const endTime = endDT ? `${pad(endDT.getHours())}:${pad(endDT.getMinutes())}` : '';
+      $('#editBody').innerHTML = `
+        <label>Data</label>
+        <input type="date" id="fDate" value="${sh.date}" />
+        <div class="row">
+          <div>
+            <label>Entrata</label>
+            <input type="time" id="fStart" value="${startTime}" />
+          </div>
+          <div>
+            <label>Uscita</label>
+            <input type="time" id="fEnd" value="${endTime}" ${sh.end ? '' : 'placeholder="in corso"'} />
+          </div>
+        </div>
+        <div style="margin-top:8px; color:var(--ink-soft); font-size:13px;">Pausa pranzo di 30 minuti sottratta automaticamente.</div>
+      `;
+    }
+    $('#editModal').classList.add('open');
+  }
+
+  function closeEditor() {
+    editingId = null;
+    $('#editModal').classList.remove('open');
+  }
+
+  $('#editCancel').addEventListener('click', closeEditor);
+  $('#editModal').addEventListener('click', (e) => {
+    if (e.target === $('#editModal')) closeEditor();
+  });
+
+  $('#editDelete').addEventListener('click', () => {
+    if (!editingId) return;
+    if (!confirm('Eliminare questo turno?')) return;
+    state.shifts = state.shifts.filter(s => s.id !== editingId);
+    saveState(); renderAll(); closeEditor();
+    toast('Turno eliminato');
+  });
+
+  $('#editSave').addEventListener('click', () => {
+    if (!editingId) return;
+    const sh = state.shifts.find(s => s.id === editingId);
+    if (!sh) return closeEditor();
+    const date = document.getElementById('fDate').value;
+    if (!date) { toast('Data mancante'); return; }
+
+    // Impedisci di spostare un turno su una data che ne ha già un altro
+    const clash = state.shifts.find(s => s.date === date && s.id !== sh.id);
+    if (clash) {
+      toast(`Esiste già un turno il ${date}.`);
+      return;
+    }
+
+    sh.date = date;
+    if (sh.type === 'sede') {
+      const st = document.getElementById('fStart').value;
+      const en = document.getElementById('fEnd').value;
+      if (!st) { toast('Ora entrata mancante'); return; }
+      const [sy,sm,sd] = date.split('-').map(Number);
+      const [sh1, sm1] = st.split(':').map(Number);
+      let startDT = new Date(sy, sm-1, sd, sh1, sm1, 0, 0);
+      sh.start = clampStart(startDT);
+      startDT = new Date(sh.start);
+      if (en) {
+        const [eh, em] = en.split(':').map(Number);
+        let endDT = new Date(sy, sm-1, sd, eh, em, 0, 0);
+        // se uscita è prima dell'entrata, presumo giorno successivo
+        if (endDT <= startDT) endDT.setDate(endDT.getDate() + 1);
+        sh.end = endDT.toISOString();
+      } else {
+        sh.end = null;
+      }
+      sh.pauseMin = state.pausaMin;
+    }
+
+    saveState(); renderAll(); closeEditor();
+    toast('Turno aggiornato');
+  });
+
+  // delega click su lista
+  $('#shiftsList').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-edit]');
+    if (btn) {
+      openEditor(btn.getAttribute('data-edit'));
+      return;
+    }
+    const row = e.target.closest('.shift');
+    if (row) openEditor(row.getAttribute('data-id'));
+  });
+
+  // -----------------------------
+  // Modale AGGIUNGI turno
+  // -----------------------------
+  let addType = 'sede';
+
+  function openAdd() {
+    addType = 'sede';
+    document.getElementById('aDate').value = ymd(new Date());
+    document.getElementById('aStart').value = '08:00';
+    document.getElementById('aEnd').value = '16:00';
+    updateAddType();
+    $('#addModal').classList.add('open');
+  }
+  function closeAdd() { $('#addModal').classList.remove('open'); }
+
+  function updateAddType() {
+    // toggle bottoni segmented
+    document.querySelectorAll('#aType button').forEach(b => {
+      b.classList.toggle('on', b.dataset.type === addType);
+    });
+    document.getElementById('aSedeFields').style.display = addType === 'sede' ? '' : 'none';
+    const smartInfo = document.getElementById('aSmartInfo');
+    if (addType === 'smart') {
+      const d = document.getElementById('aDate').value;
+      if (d) {
+        const h = targetHoursForDate(parseYMD(d));
+        smartInfo.textContent = h > 0
+          ? `Giornata smart: ${fmtHM(h)} contati come lavorati.`
+          : 'Nel weekend non ci sono ore da conteggiare.';
+      } else {
+        smartInfo.textContent = '';
+      }
+      smartInfo.style.display = '';
+    } else {
+      smartInfo.style.display = 'none';
+    }
+  }
+
+  document.querySelectorAll('#aType button').forEach(b => {
+    b.addEventListener('click', () => { addType = b.dataset.type; updateAddType(); });
+  });
+  document.getElementById('aDate').addEventListener('change', updateAddType);
+  $('#btnAddShift').addEventListener('click', openAdd);
+  $('#aCancel').addEventListener('click', closeAdd);
+  $('#addModal').addEventListener('click', (e) => {
+    if (e.target === $('#addModal')) closeAdd();
+  });
+
+  $('#aSave').addEventListener('click', () => {
+    const date = document.getElementById('aDate').value;
+    if (!date) { toast('Scegli un giorno'); return; }
+    if (hasAnyShiftOnDate(date)) {
+      toast('Esiste già un turno in quel giorno');
+      return;
+    }
+    if (addType === 'smart') {
+      state.shifts.push({ id: uid(), type: 'smart', date });
+      saveState(); renderAll(); closeAdd();
+      toast('Giornata smart aggiunta');
+      return;
+    }
+    // Sede
+    const st = document.getElementById('aStart').value;
+    const en = document.getElementById('aEnd').value;
+    if (!st || !en) { toast('Inserisci entrata e uscita'); return; }
+    const [sy,sm,sd] = date.split('-').map(Number);
+    const [sh1, sm1] = st.split(':').map(Number);
+    const [eh, em] = en.split(':').map(Number);
+    let startDT = new Date(sy, sm-1, sd, sh1, sm1, 0, 0);
+    startDT = new Date(clampStart(startDT));
+    let endDT = new Date(sy, sm-1, sd, eh, em, 0, 0);
+    if (endDT <= startDT) endDT.setDate(endDT.getDate() + 1);
+    state.shifts.push({
+      id: uid(),
+      type: 'sede',
+      date,
+      start: startDT.toISOString(),
+      end: endDT.toISOString(),
+      pauseMin: state.pausaMin
+    });
+    saveState(); renderAll(); closeAdd();
+    toast('Turno aggiunto');
+  });
+
+  // Aggiorna vista quando la pagina torna in primo piano (per timer & data)
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) renderAll();
+  });
+
+  renderAll();
+
+  // Registrazione service worker (PWA)
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch((err) => {
+        console.warn('Service worker non registrato:', err);
+      });
+    });
+  }
+</script>
+</body>
+</html>

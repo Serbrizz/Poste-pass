@@ -1,0 +1,32 @@
+{
+  "name": "Poste Pass",
+  "short_name": "Poste Pass",
+  "description": "Registra i turni di lavoro (sede e smart) e calcola le 36 ore settimanali.",
+  "start_url": "./ore-lavoro.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#003399",
+  "theme_color": "#003399",
+  "lang": "it",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
