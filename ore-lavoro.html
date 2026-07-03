@@ -403,7 +403,7 @@
           <input type="time" id="aEnd" value="16:00" />
         </div>
       </div>
-      <div style="margin-top:8px; color:var(--ink-soft); font-size:13px;">Pausa pranzo di 30 minuti sottratta automaticamente.</div>
+      <div style="margin-top:8px; color:var(--ink-soft); font-size:13px;">Da lun a gio la pausa di 30 min viene sottratta automaticamente. Il venerdì è già compresa nelle 6h.</div>
     </div>
     <div id="aSmartInfo" style="display:none; margin-top:12px; color:var(--ink-soft); font-size:13px;"></div>
     <div class="buttons">
@@ -499,6 +499,13 @@
     if (dow === 4) return 6;
     return 0;
   }
+  // Minuti di pausa da sottrarre per un turno in sede in base al giorno.
+  // Lun-gio: 30 min. Ven: 0 (l'orario ridotto di 6h la comprende già).
+  function pauseMinForDate(d) {
+    const dow = (d.getDay() + 6) % 7;
+    if (dow <= 3) return state.pausaMin;
+    return 0;
+  }
   function fmtHM(hours) {
     if (hours < 0) hours = 0;
     const totalMin = Math.round(hours * 60);
@@ -536,7 +543,7 @@
     // sede
     if (!shift.end) return 0; // ancora in corso
     const ms = new Date(shift.end) - new Date(shift.start);
-    const pauseMin = typeof shift.pauseMin === 'number' ? shift.pauseMin : state.pausaMin;
+    const pauseMin = pauseMinForDate(parseYMD(shift.date));
     const workedMs = ms - pauseMin * 60 * 1000;
     return Math.max(0, workedMs / 3600000);
   }
@@ -608,7 +615,10 @@
       const timesTxt = sh.type === 'smart'
         ? `Giornata smart · target ${fmtHM(targetHoursForDate(parseYMD(sh.date)))}`
         : (sh.end
-            ? `${fmtTime(sh.start)} → ${fmtTime(sh.end)} · pausa ${sh.pauseMin ?? state.pausaMin}m`
+            ? (() => {
+                const p = pauseMinForDate(parseYMD(sh.date));
+                return `${fmtTime(sh.start)} → ${fmtTime(sh.end)}` + (p > 0 ? ` · pausa ${p}m` : '');
+              })()
             : `${fmtTime(sh.start)} → in corso`);
       return `
         <div class="shift" data-id="${sh.id}">
@@ -634,11 +644,12 @@
       startBtn.disabled = true;
       const startDT = new Date(r.start);
       const target = targetHoursForDate(parseYMD(r.date));
-      const pause = typeof r.pauseMin === 'number' ? r.pauseMin : state.pausaMin;
+      const pause = pauseMinForDate(parseYMD(r.date));
       // Fine turno = entrata + ore target + pausa (perché la pausa verrà sottratta al calcolo effettivo)
       const endMs = startDT.getTime() + (target * 60 + pause) * 60 * 1000;
       const endDT = new Date(endMs);
-      $('#runningSince').textContent = `Entrata: ${fmtTime(r.start)} · pausa ${pause}m`;
+      const pauseLabel = pause > 0 ? ` · pausa ${pause}m` : ' · nessuna pausa';
+      $('#runningSince').textContent = `Entrata: ${fmtTime(r.start)}${pauseLabel}`;
       $('#runningEndAt').textContent = target > 0
         ? `Fine turno stimata: ${pad(endDT.getHours())}:${pad(endDT.getMinutes())}`
         : `Giornata non lavorativa`;
@@ -768,7 +779,7 @@
             <input type="time" id="fEnd" value="${endTime}" ${sh.end ? '' : 'placeholder="in corso"'} />
           </div>
         </div>
-        <div style="margin-top:8px; color:var(--ink-soft); font-size:13px;">Pausa pranzo di 30 minuti sottratta automaticamente.</div>
+        <div style="margin-top:8px; color:var(--ink-soft); font-size:13px;">Da lun a gio la pausa di 30 min viene sottratta automaticamente. Il venerdì è già compresa nelle 6h.</div>
       `;
     }
     $('#editModal').classList.add('open');
