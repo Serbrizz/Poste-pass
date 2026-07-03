@@ -1,6 +1,6 @@
 // Service worker per Poste Pass
 // Aggiorna CACHE_VERSION quando cambi l'app per forzare il refresh della cache.
-const CACHE_VERSION = 'poste-pass-v1';
+const CACHE_VERSION = 'poste-pass-v2';
 const ASSETS = [
   './ore-lavoro.html',
   './manifest.webmanifest',
